@@ -1,369 +1,448 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 	<head>
+		<title>three.js css3d - periodic table</title>
 		<meta charset="utf-8">
-		<title>three.js examples</title>
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<link rel="shortcut icon" href="../files/favicon.ico" />
-		<link rel="stylesheet" type="text/css" href="../files/main.css">
+		<link type="text/css" rel="stylesheet" href="main.css">
+		<style>
+			a {
+				color: #8ff;
+			}
+
+			#menu {
+				position: absolute;
+				bottom: 20px;
+				width: 100%;
+				text-align: center;
+			}
+
+			.element {
+				width: 300px;
+				height: 160px;
+				box-shadow: 0px 0px 12px rgba(0,255,255,0.5);
+				border: 1px solid rgba(127,255,255,0.25);
+				font-family: Helvetica, sans-serif;
+				text-align: center;
+				line-height: normal;
+				cursor: default;
+			}
+
+			.element:hover {
+				box-shadow: 0px 0px 12px rgba(0,255,255,0.75);
+				border: 1px solid rgba(127,255,255,0.75);
+			}
+
+				.element .number {
+					position: absolute;
+					top: 20px;
+					right: 20px;
+					font-size: 12px;
+					color: rgba(127,255,255,0.75);
+				}
+
+				.element .symbol {
+					position: absolute;
+					top: 40px;
+					left: 0px;
+					right: 0px;
+					font-size: 60px;
+					font-weight: bold;
+					color: rgba(255,255,255,0.75);
+					text-shadow: 0 0 10px rgba(0,255,255,0.95);
+				}
+
+				.element .details {
+					position: absolute;
+					bottom: 25px;
+					left: 0px;
+					right: 0px;
+					font-size: 14px;
+					color: rgba(127,255,255,0.75);
+				}
+
+			button {
+				color: rgba(127,255,255,0.75);
+				background: transparent;
+				outline: 1px solid rgba(127,255,255,0.75);
+				border: 0px;
+				padding: 5px 10px;
+				cursor: pointer;
+			}
+
+			button:hover {
+				background-color: rgba(0,255,255,0.5);
+			}
+
+			button:active {
+				color: #000000;
+				background-color: rgba(0,255,255,0.75);
+			}
+		</style>
 	</head>
 	<body>
 
-		<div id="panel">
-
-			<div id="header">
-				<h1><a href="https://threejs.org">three.js</a></h1>
-
-				<div id="sections">
-					<a href="../docs/index.html#manual/introduction/Creating-a-scene">docs</a>
-					<span class="selected">examples</span>
-				</div>
-
-				<div id="expandButton"></div>
-			</div>
-
-			<div id="panelScrim"></div>
-
-			<div id="contentWrapper">
-
-				<div id="inputWrapper">
-					<input placeholder="" type="text" id="filterInput" autocorrect="off" autocapitalize="off" spellcheck="false" />
-					<div id="exitSearchButton"></div>
-				</div>
-
-				<div id="content">
-					<img id="previewsToggler" src="./files/thumbnails.svg" width="20" height="20" />
-				</div>
-			</div>
-
+		<div id="info"><a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> css3d - periodic table.</div>
+		<div id="container"></div>
+		<div id="menu">
+			<button id="table">TABLE</button>
+			<button id="sphere">SPHERE</button>
+			<button id="helix">HELIX</button>
+			<button id="grid">GRID</button>
 		</div>
 
-		<iframe id="viewer" name="viewer" allowfullscreen allowvr onmousewheel=""></iframe>
-
-		<a id="button" target="_blank"><img src="../files/ic_code_black_24dp.svg"></a>
-
-		<script>
-
-		const panel = document.getElementById( 'panel' );
-		const content = document.getElementById( 'content' );
-		const viewer = document.getElementById( 'viewer' );
-		const filterInput = document.getElementById( 'filterInput' );
-		const exitSearchButton = document.getElementById( 'exitSearchButton' );
-		const expandButton = document.getElementById( 'expandButton' );
-		const viewSrcButton = document.getElementById( 'button' );
-		const panelScrim = document.getElementById( 'panelScrim' );
-
-		const previewsToggler = document.getElementById( 'previewsToggler' );
-
-		const links = {};
-		const validRedirects = new Map();
-		const container = document.createElement( 'div' );
-
-		let selected = null;
-
-		init();
-
-		async function init() {
-
-			content.appendChild( container );
-
-			viewSrcButton.style.display = 'none';
-
-			const files = await ( await fetch( 'files.json' ) ).json();
-			const tags = await ( await fetch( 'tags.json' ) ).json();
-
-			for ( const key in files ) {
-
-				const section = files[ key ];
-
-				const header = document.createElement( 'h2' );
-				header.textContent = key;
-				header.setAttribute( 'data-category', key );
-				container.appendChild( header );
-
-				for ( let i = 0; i < section.length; i ++ ) {
-
-					const file = section[ i ];
-
-					const link = createLink( file );
-					container.appendChild( link );
-
-					links[ file ] = link;
-					validRedirects.set( file, file + '.html' );
-
-				}
-
-			}
-
-			if ( window.location.hash !== '' ) {
-
-				const file = window.location.hash.substring( 1 );
-
-				// use a predefined map of redirects to avoid untrusted URL redirection due to user-provided value
-
-				if ( validRedirects.has( file ) === true ) {
-
-					selectFile( file );
-					viewer.src = validRedirects.get( file );
-
-				}
-
-			}
-
-			filterInput.value = extractQuery();
-
-			if ( filterInput.value !== '' ) {
-
-				panel.classList.add( 'searchFocused' );
-
-			}
-
-			updateFilter( files, tags );
-
-			// Events
-
-			filterInput.onfocus = function ( ) {
-
-				panel.classList.add( 'searchFocused' );
-
-			};
-
-			filterInput.onblur = function ( ) {
-
-				if ( filterInput.value === '' ) {
-
-					panel.classList.remove( 'searchFocused' );
-
-				}
-
-			};
-
-			exitSearchButton.onclick = function ( ) {
-
-				filterInput.value = '';
-				updateFilter( files, tags );
-				panel.classList.remove( 'searchFocused' );
-
-			};
-
-			filterInput.addEventListener( 'input', function () {
-
-				updateFilter( files, tags );
-
-			} );
-
-
-			expandButton.addEventListener( 'click', function ( event ) {
-
-				event.preventDefault();
-				panel.classList.toggle( 'open' );
-
-			} );
-
-			panelScrim.onclick = function ( event ) {
-
-				event.preventDefault();
-				panel.classList.toggle( 'open' );
-
-			};
-
-			previewsToggler.onclick = function ( event ) {
-
-				event.preventDefault();
-				content.classList.toggle( 'minimal' );
-
-			};
-
-			// iOS iframe auto-resize workaround
-
-			if ( /(iPad|iPhone|iPod)/g.test( navigator.userAgent ) ) {
-
-				viewer.style.width = getComputedStyle( viewer ).width;
-				viewer.style.height = getComputedStyle( viewer ).height;
-				viewer.setAttribute( 'scrolling', 'no' );
-
-			}
-
-		}
-
-		function createLink( file ) {
-
-			const template = `
-				<div class="card">
-					<a href="${file}.html" target="viewer">
-						<div class="cover">
-							<img src="screenshots/${ file }.jpg" loading="lazy" width="400" />
-						</div>
-						<div class="title">${getName( file )}</div>
-					</a>
-				</div>
-			`;
-
-			const link = createElementFromHTML( template );
-
-			link.querySelector( 'a[target="viewer"]' ).addEventListener( 'click', function ( event ) {
-
-				if ( event.button !== 0 || event.ctrlKey || event.altKey || event.metaKey ) return;
-
-				selectFile( file );
-
-			} );
-
-			return link;
-
-		}
-
-		function selectFile( file ) {
-
-			if ( selected !== null ) links[ selected ].classList.remove( 'selected' );
-
-			links[ file ].classList.add( 'selected' );
-
-			window.location.hash = file;
-			viewer.focus();
-
-			panel.classList.remove( 'open' );
-
-			selected = file;
-
-			// Reveal "View source" button and set attributes to this example
-			viewSrcButton.style.display = '';
-			viewSrcButton.href = 'https://github.com/hazimhaniz/three.js/blob/dev/examples/' + selected + '.html';
-			viewSrcButton.title = 'View source code for ' + getName( selected ) + ' on GitHub';
-
-		}
-
-		function updateFilter( files, tags ) {
-
-			let v = filterInput.value.trim();
-			v = v.replace( /\s+/gi, ' ' ); // replace multiple whitespaces with a single one
-
-			if ( v !== '' ) {
-
-				window.history.replaceState( {}, '', '?q=' + v + window.location.hash );
-
-			} else {
-
-				window.history.replaceState( {}, '', window.location.pathname + window.location.hash );
-
-			}
-
-			const exp = new RegExp( v, 'gi' );
-
-			for ( const key in files ) {
-
-				const section = files[ key ];
-
-				for ( let i = 0; i < section.length; i ++ ) {
-
-					filterExample( section[ i ], exp, tags );
-
-				}
-
-			}
-
-			layoutList( files );
-
-		}
-
-		function filterExample( file, exp, tags ) {
-
-			const link = links[ file ];
-			const name = getName( file );
-			if ( file in tags ) file += ' ' + tags[ file ].join( ' ' );
-			const res = file.match( exp );
-			let text;
-
-			if ( res && res.length > 0 ) {
-
-				link.classList.remove( 'hidden' );
-
-				for ( let i = 0; i < res.length; i ++ ) {
-
-					text = name.replace( res[ i ], '<b>' + res[ i ] + '</b>' );
-
-				}
-
-				link.querySelector( '.title' ).innerHTML = text;
-
-			} else {
-
-				link.classList.add( 'hidden' );
-				link.querySelector( '.title' ).innerHTML = name;
-
-			}
-
-		}
-
-		function getName( file ) {
-
-			const name = file.split( '_' );
-			name.shift();
-			return name.join( ' / ' );
-
-		}
-
-		function layoutList( files ) {
-
-			for ( const key in files ) {
-
-				let collapsed = true;
-
-				const section = files[ key ];
-
-				for ( let i = 0; i < section.length; i ++ ) {
-
-					const file = section[ i ];
-
-					if ( links[ file ].classList.contains( 'hidden' ) === false ) {
-
-						collapsed = false;
-						break;
-
+		<script type="module">
+
+			import * as THREE from '../build/three.module.js';
+
+			import { TWEEN } from './jsm/libs/tween.module.min.js';
+			import { TrackballControls } from './jsm/controls/TrackballControls.js';
+			import { CSS3DRenderer, CSS3DObject } from './jsm/renderers/CSS3DRenderer.js';
+
+			const table = [
+				"AINA", "20", "F", 1, 1,
+				"HAFIZ", "23", "M", 18, 1,
+				"NORMAN", "23", "M", 1, 2,
+				"IDIL", "23", "M", 2, 2,
+				"AZIM", "23", "M", 13, 2,
+				"SAMZAI", "45", "F", 14, 2,
+				"FATIN", "23", "F", 15, 2,
+				"NABIHA", "23", "F", 16, 2,
+				"FAHMI", "23", "M", 17, 2,
+				"AMIR", "23", "M", 18, 2,
+				"BELLA", "23", "F", 1, 3,
+				"FAIRUL", "23", "M", 2, 3,
+				"SYAFIQ", "23", "M", 13, 3,
+				"ALIAH", "23", "F", 14, 3,
+				"WAFI", "23", "M", 15, 3,
+				"AQILA", "23", "F", 16, 3,
+				"NASRIN", "23", "F", 17, 3,
+				"QAYYUM", "23", "M", 18, 3,
+				"ZAIDA", "23", "F", 1, 4,
+				"KEVIN", "23", "M", 2, 4,
+				"HAZRIN", "23", "M", 3, 4,
+				"AARON", "23", "M", 4, 4,
+				"JAZLI", "23", "M", 5, 4,
+				"NAJIHA", "23", "F", 6, 4,
+				"RUSYDI", "23", "M", 7, 4,
+				"FAHMI", "23", "M", 8, 4,
+				"CHIN", "23", "F", 9, 4,
+				"NUR", "34", "F", 10, 4,
+				"ZACK", "34", "M", 11, 4,
+				"LEE", "25", "F", 12, 4,
+				"ALIF", "18", "M", 13, 4,
+				"NURUL", "23", "F", 14, 4,
+				"HASAN", "22", "M", 15, 4,
+				"SEAN", "23", "M", 16, 4,
+				"TAY", "34", "M", 17, 4,
+				"CELINE", "23", "F", 18, 4,
+				"NG", "22", "F", 1, 5,
+				"WERN", "23", "F", 2, 5,
+				"YI", "22", "F", 3, 5,
+				"JIA", "23", "F", 4, 5,
+				"FANA", "23", "F", 5, 5,
+				"SUBA", "33", "M", 6, 5,
+				"ZAKI", "44", "M", 7, 5,
+				"DINA", "22", "F", 8, 5,
+				"TINA", "23", "F", 9, 5,
+				"TINI", "23", "F", 10, 5,
+				"IRFAN", "23", "M", 11, 5,
+				"TAN", "23", "M", 12, 5,
+				"ALRIC", "24", "M", 13, 5,
+				"MIMI", "22", "F", 14, 5,
+				"AISHA", "23", "F", 15, 5,
+				"NISA", "23", "F", 16, 5,
+				"BOBBY", "23", "M", 17, 5,
+				"AMIR", "23", "M", 18, 5,
+				"NORIN", "23", "F", 1, 6,
+				"BADRUL", "23", "M", 2, 6,
+				"LIZA", "23", "F", 4, 9,
+				"YUSOF", "44", "M", 5, 9,
+				"NAJWA", "25", "F", 6, 9,
+				"TEO", "44", "M", 7, 9,
+				"LEE", "44", "F", 8, 9,
+				"TOPSON", "33", "F", 9, 9,
+				"LUNA", "33", "F", 10, 9,
+				"FIONA", "33", "F", 11, 9,
+				"PUTRI", "23", "F", 12, 9,
+				"AIMAN", "33", "M", 13, 9,
+				"NAZURA", "44", "F", 14, 9,
+				"ALI", "44", "M", 15, 9,
+				"MEDUSA", "33", "F", 16, 9,
+				"INVOKER", "33", "M", 17, 9,
+				"EWANA", "33", "F", 18, 9,
+				"ZEUS", "33", "M", 4, 6,
+				"MIRANA", "22", "F", 5, 6,
+				"DROW", "33", "F", 6, 6,
+				"LINA", "33", "F", 7, 6,
+				"MEEPO", "33", "F", 8, 6,
+				"BRISTLE", "33", "M", 9, 6,
+				"EMBER", "33", "M", 10, 6,
+				"STORM", "33", "F", 11, 6,
+				"SUMAIL", "33", "M", 12, 6,
+				"RAMZES", "33", "M", 13, 6,
+				"YIN", "33", "F", 14, 6,
+				"LINDA", "33", "F", 15, 6,
+				"ZAIDA", "23", "F", 16, 6,
+				"AARON", "23", "M", 17, 6,
+				"QAYYIM", "23", "M", 18, 6,
+				"AINA", "26", "F", 1, 7,
+				"LISA", "27", "F", 2, 7,
+				"SHAHID", "23", "M", 4, 10,
+				"FIKRIL", "23", "M", 5, 10,
+				"HAKIM", "33", "M", 6, 10,
+				"NABIHA", "23", "F", 7, 10,
+				"IZZAH", "33", "F", 8, 10,
+				"ADAM", "44", "M", 9, 10,
+				"ZAI", "33", "M", 10, 10,
+				"HUSAM", "33", "M", 11, 10,
+				"ZAHIRA", "50", "F", 12, 10,
+				"AMER", "23", "M", 13, 10,
+				"AZMEER", "23", "M", 14, 10,
+				"FAWWAZ", "23", "M", 15, 10,
+				"RAZAK", "44", "M", 16, 10,
+				"PIAN", "43", "M", 17, 10,
+				"SUBAR", "33", "M", 18, 10,
+				"TONY", "44", "M", 4, 7,
+				"SHAH", "33", "M", 5, 7,
+				"ILHAM", "33", "M", 6, 7,
+				"SOLAH", "33", "M", 7, 7,
+				"SOFEA", "33", "F", 8, 7,
+				"MALIK", "22", "M", 9, 7,
+				"REMY", "33", "M", 10, 7,
+				"SYAZ", "55", "M", 11, 7,
+				"HANIS", "33", "M", 12, 7,
+				"JAMAL", "44", "M", 13, 7,
+				"FAUZI", "33", "M", 14, 7,
+				"NORLIA", "33", "F", 15, 7,
+				"SURAYA", "33", "F", 16, 7,
+				"MARK", "22", "M", 17, 7,
+				"ISMAIL", "24", "M", 18, 7
+			];
+
+			let camera, scene, renderer;
+			let controls;
+
+			const objects = [];
+			const targets = { table: [], sphere: [], helix: [], grid: [] };
+
+			init();
+			animate();
+
+			function init() {
+
+				camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.z = 5600;
+
+				scene = new THREE.Scene();
+
+				// table
+
+				for ( let i = 0; i < table.length; i += 5 ) {
+
+					const element = document.createElement( 'div' );
+					element.className = 'element';
+					if (table[i+2] == "F"){
+					element.style.backgroundColor = 'rgba(255, 77, 166,' + ( Math.random() * 0.5 + 0.25 ) + ')';
+					} 
+					
+					else{
+					element.style.backgroundColor = 'rgba(0,127,127,' + ( Math.random() * 0.5 + 0.25 ) + ')';
 					}
 
+					const number = document.createElement( 'div' );
+			        number.className = 'number';
+					number.textContent = ( i / 5 ) + 1;
+					element.appendChild( number );
+
+					const symbol = document.createElement( 'div' );
+					symbol.className = 'symbol';
+					symbol.textContent = table[ i ];
+					element.appendChild( symbol );
+
+					const details = document.createElement( 'div' );
+					details.className = 'details';
+					details.innerHTML = table[ i + 1 ] + '<br>' + table[ i + 2 ];
+					element.appendChild( details );
+
+					const objectCSS = new CSS3DObject( element );
+					objectCSS.position.x = Math.random() * 4000 - 2000;
+					objectCSS.position.y = Math.random() * 4000 - 2000;
+					objectCSS.position.z = Math.random() * 4000 - 2000;
+					scene.add( objectCSS );
+
+					objects.push( objectCSS );
+
+					//
+
+					const object = new THREE.Object3D();
+					object.position.x = ( table[ i + 3 ] * 330 ) - 3100;
+					object.position.y = - ( table[ i + 4 ] * 180 ) + 990;
+
+					targets.table.push( object );
+
 				}
 
-				const element = document.querySelector( 'h2[data-category="' + key + '"]' );
+				// sphere
 
-				if ( collapsed ) {
+				const vector = new THREE.Vector3();
 
-					element.classList.add( 'hidden' );
+				for ( let i = 0, l = objects.length; i < l; i ++ ) {
 
-				} else {
+					const phi = Math.acos( - 1 + ( 2 * i ) / l );
+					const theta = Math.sqrt( l * Math.PI ) * phi;
 
-					element.classList.remove( 'hidden' );
+					const object = new THREE.Object3D();
+
+					object.position.setFromSphericalCoords( 1100, phi, theta );
+
+					vector.copy( object.position ).multiplyScalar( 2 );
+
+					object.lookAt( vector );
+
+					targets.sphere.push( object );
 
 				}
+
+				// helix
+
+				for ( let i = 0, l = objects.length; i < l; i ++ ) {
+
+					const theta = i * 0.175 + Math.PI;
+					const y = - ( i * 8 ) + 450;
+
+					const object = new THREE.Object3D();
+
+					object.position.setFromCylindricalCoords( 1900, theta, y );
+
+					vector.x = object.position.x * 2;
+					vector.y = object.position.y;
+					vector.z = object.position.z * 2;
+
+					object.lookAt( vector );
+
+					targets.helix.push( object );
+
+				}
+
+				// grid
+
+				for ( let i = 0; i < objects.length; i ++ ) {
+
+					const object = new THREE.Object3D();
+
+					object.position.x = ( ( i % 5 ) * 400 ) - 800;
+					object.position.y = ( - ( Math.floor( i / 5 ) % 5 ) * 400 ) + 800;
+					object.position.z = ( Math.floor( i / 25 ) ) * 1000 - 2000;
+
+					targets.grid.push( object );
+
+				}
+
+				//
+
+				renderer = new CSS3DRenderer();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				document.getElementById( 'container' ).appendChild( renderer.domElement );
+
+				//
+
+				controls = new TrackballControls( camera, renderer.domElement );
+				controls.minDistance = 500;
+				controls.maxDistance = 6000;
+				controls.addEventListener( 'change', render );
+
+				const buttonTable = document.getElementById( 'table' );
+				buttonTable.addEventListener( 'click', function () {
+
+					transform( targets.table, 2000 );
+
+				} );
+
+				const buttonSphere = document.getElementById( 'sphere' );
+				buttonSphere.addEventListener( 'click', function () {
+
+					transform( targets.sphere, 2000 );
+
+				} );
+
+				const buttonHelix = document.getElementById( 'helix' );
+				buttonHelix.addEventListener( 'click', function () {
+
+					transform( targets.helix, 2000 );
+
+				} );
+
+				const buttonGrid = document.getElementById( 'grid' );
+				buttonGrid.addEventListener( 'click', function () {
+
+					transform( targets.grid, 2000 );
+
+				} );
+
+				transform( targets.table, 2000 );
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize );
 
 			}
 
-		}
+			function transform( targets, duration ) {
 
-		function extractQuery() {
+				TWEEN.removeAll();
 
-			const p = window.location.search.indexOf( '?q=' );
+				for ( let i = 0; i < objects.length; i ++ ) {
 
-			if ( p !== - 1 ) {
+					const object = objects[ i ];
+					const target = targets[ i ];
 
-				return decodeURI( window.location.search.substr( 3 ) );
+					new TWEEN.Tween( object.position )
+						.to( { x: target.position.x, y: target.position.y, z: target.position.z }, Math.random() * duration + duration )
+						.easing( TWEEN.Easing.Exponential.InOut )
+						.start();
+
+					new TWEEN.Tween( object.rotation )
+						.to( { x: target.rotation.x, y: target.rotation.y, z: target.rotation.z }, Math.random() * duration + duration )
+						.easing( TWEEN.Easing.Exponential.InOut )
+						.start();
+
+				}
+
+				new TWEEN.Tween( this )
+					.to( {}, duration * 2 )
+					.onUpdate( render )
+					.start();
 
 			}
 
-			return '';
+			function onWindowResize() {
 
-		}
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
 
+				renderer.setSize( window.innerWidth, window.innerHeight );
 
-		function createElementFromHTML( htmlString ) {
+				render();
 
-			const div = document.createElement( 'div' );
-			div.innerHTML = htmlString.trim();
-			return div.firstChild;
+			}
 
-		}
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				TWEEN.update();
+
+				controls.update();
+
+			}
+
+			function render() {
+
+				renderer.render( scene, camera );
+
+			}
 
 		</script>
-
 	</body>
 </html>
